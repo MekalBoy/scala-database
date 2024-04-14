@@ -40,3 +40,15 @@ object Table {
 extension (table: Table) {
   def apply(i: Int): Table = new Table(table.name, List(table.data(i))) // Implement indexing here, find the right function to override
 }
+
+val tabel = new Table("People", List(
+  Map("id" -> "1", "name" -> "John", "age" -> "23", "CNP" -> "1234567890123"),
+  Map("id" -> "2", "name" -> "Jane", "age" -> "25", "CNP" -> "1234567890124"),
+  Map("id" -> "3", "name" -> "Jack", "age" -> "27", "CNP" -> "1234567890125"),
+  Map("id" -> "4", "name" -> "Jill", "age" -> "29", "CNP" -> "1234567890126"),
+))
+tabel(1)
+tabel.insert(Map("id" -> "5", "name" -> "Jess", "age" -> "31", "CNP" -> "1234567890127"));
+tabel.delete(Map("id" -> "4", "name" -> "Jill", "age" -> "29", "CNP" -> "1234567890126"));
+tabel.sort("name")
+tabel.select(List("id", "name"))
