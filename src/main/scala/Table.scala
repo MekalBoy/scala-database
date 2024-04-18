@@ -17,7 +17,7 @@ case class Table (tableName: String, tableData: Tabular) {
 
   def update(f: FilterCond, updates: Map[String, String]): Table = ???
 
-  def filter(f: FilterCond): Table = ???
+  def filter(f: FilterCond): Table = new Table(name, data.filter(row => f.eval(row).contains(true)))
 
   def select(columns: List[String]): Table =
     new Table(tableName, tableData.map(row => row.view.filterKeys(key => columns.contains(key)).toMap))
