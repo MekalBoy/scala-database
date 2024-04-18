@@ -2,20 +2,30 @@ type Row = Map[String, String]
 type Tabular = List[Row]
 
 case class Table (tableName: String, tableData: Tabular) {
-
   override def toString: String = {
     val header = tableData.headOption.getOrElse(Map.empty).keys.mkString(",")
     val rows = tableData.map(row => row.values.mkString(",")).mkString("\n")
-    s"$tableName\n$header\n$rows"
+    s"$header\n$rows"
   }
 
-  def insert(row: Row): Table = new Table(tableName, tableData.appended(row))
+  def insert(row: Row): Table = {
+    val newTables = if (data.contains(row)) data else data.appended(row)
+    new Table(tableName, newTables)
+  }
 
   def delete(row: Row): Table = new Table(tableName, tableData.filterNot(data => data == row))
 
   def sort(column: String): Table = new Table(tableName, tableData.sortBy(_.get(column)))
 
-  def update(f: FilterCond, updates: Map[String, String]): Table = ???
+  def update(f: FilterCond, updates: Map[String, String]): Table = {
+    val updateData = data.map(row =>
+      if (filter(f).data.contains(row))
+        row ++ updates
+      else
+        row
+    )
+    new Table(name, updateData)
+  }
 
   def filter(f: FilterCond): Table = new Table(name, data.filter(row => f.eval(row).contains(true)))
 
@@ -29,14 +39,17 @@ case class Table (tableName: String, tableData: Tabular) {
 
 object Table {
   def apply(name: String, s: String): Table = {
-    val rows = s.split("\n").map(_.trim).map(row =>
-      val pairs = row.split(",").map(_.trim.split("="))
-      pairs.map(pair => pair(0) -> pair(1)).toMap
+    val lines = s.split("\n")
+    val header = lines.head.split(",")
+    val rows = lines.tail.map(line =>
+      val values = line.split(",")
+      header.zip(values).toMap
     ).toList
     new Table(name, rows)
   }
 }
 
 extension (table: Table) {
-  def apply(i: Int): Table = new Table(table.name, List(table.data(i))) // Implement indexing here, find the right function to override
+  // Implement indexing here, find the right function to override
+  def apply(i: Int): Table = new Table(table.name, List(table.data(i)))
 }

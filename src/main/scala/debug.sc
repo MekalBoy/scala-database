@@ -8,16 +8,27 @@ case class Table (tableName: String, tableData: Tabular) {
   override def toString: String = {
     val header = tableData.headOption.getOrElse(Map.empty).keys.mkString(",")
     val rows = tableData.map(row => row.values.mkString(",")).mkString("\n")
-    s"$tableName\n$header\n$rows"
+    s"$header\n$rows"
   }
 
-  def insert(row: Row): Table = new Table(tableName, tableData.appended(row))
+  def insert(row: Row): Table = {
+    val newTables = if (data.contains(row)) data else data.appended(row)
+    new Table(tableName, newTables)
+  }
 
   def delete(row: Row): Table = new Table(tableName, tableData.filterNot(data => data == row))
 
   def sort(column: String): Table = new Table(tableName, tableData.sortBy(_.get(column)))
 
-  def update(f: FilterCond, updates: Map[String, String]): Table = ???
+  def update(f: FilterCond, updates: Map[String, String]): Table = {
+    val updateData = data.map(row =>
+      if (filter(f).data.contains(row))
+        row ++ updates
+      else
+        row
+    )
+    new Table(name, updateData)
+  }
 
   def filter(f: FilterCond): Table = new Table(name, data.filter(row => f.eval(row).contains(true)))
 
@@ -31,9 +42,11 @@ case class Table (tableName: String, tableData: Tabular) {
 
 object Table {
   def apply(name: String, s: String): Table = {
-    val rows = s.split("\n").map(_.trim).map(row =>
-      val pairs = row.split(",").map(_.trim.split("="))
-      pairs.map(pair => pair(0) -> pair(1)).toMap
+    val lines = s.split("\n").map(_.trim)
+    val header = lines.head.split(",").map(_.trim)
+    val rows = lines.tail.map(line =>
+      val values = line.split(",").map(_.trim)
+      header.zip(values).toMap
     ).toList
     new Table(name, rows)
   }
@@ -42,6 +55,21 @@ object Table {
 extension (table: Table) {
   def apply(i: Int): Table = new Table(table.name, List(table.data(i))) // Implement indexing here, find the right function to override
 }
+
+val peopleStr: String =
+  """|id,name,age,address
+     |1,John,23,123 Main St
+     |2,Jane,27,456 Elm St
+     |3,Joe,30,789 Maple St
+     |4,Jill,25,101 Oak St
+     |5,Jack,27,112 Pine St
+     |6,Jen,24,131 Cedar St
+     |7,Jim,26,141 Birch St
+     |8,Jesse,29,151 Spruce St
+     |9,Jenny,23,161 Fir St
+     |10,Jerry,28,171 Larch St""".stripMargin
+
+val tabelStr = Table("People", peopleStr)
 
 val tabel = new Table("People", List(
   Map("id" -> "1", "name" -> "John", "age" -> "23", "CNP" -> "1234567890123"),
@@ -115,3 +143,17 @@ extension (f: FilterCond) {
   def ||(other: FilterCond) = Or(f, other)
   def !! = Not(f)
 }
+
+//tabel.filter(Field("id", _ == "John")
+
+val tabelJohn = new Table("john", List(Map("id" -> "John")))
+val fieldCond1: FilterCond = Field("id", _ == "John")
+tabelJohn.filter(fieldCond1)
+tabelJohn.filter(Field("id", _ == "John"))
+
+//val field1: Field = Field("id", _ == "John")
+//val touple1: Field = ("id", (_: String) == "John")
+//field1.eval(Map("id" -> "John")) == touple1.eval(Map("id" -> "John"))
+//val equal: FilterCond = Equal(Field("id", _ == "John"), Field("hobby", _ == "Football"))
+//equal.eval(Map("id" -> "John", "hobby" -> "Football")).get
+//!equal.eval(Map("id" -> "John", "hobby" -> "Basketball")).get

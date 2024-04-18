@@ -42,8 +42,8 @@ case class All(fs: List[FilterCond]) extends FilterCond {
     val results = fs.map(_.eval(r))
     if (!results.exists(_.isEmpty))
       Some(results.forall(_.get))
-    else
-      None // At least one condition couldn't be evaluated
+    else // at least one cannot be eval'd
+      None
   }
 }
 
