@@ -16,7 +16,13 @@ case class Database(tables: List[Table]) {
       None
   }
 
-  def join(table1: String, c1: String, table2: String, c2: String): Option[Table] = ???
+  def join(table1: String, c1: String, table2: String, c2: String): Option[Table] = {
+    val firstTable = tables.find(_.name == table1)
+    val secondTable = tables.find(_.name == table2)
+
+    // TODO
+    None
+  }
 
   // Implement indexing here
   def apply(i: Int): Table = tables(i)

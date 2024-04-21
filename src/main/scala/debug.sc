@@ -144,16 +144,54 @@ extension (f: FilterCond) {
   def !! = Not(f)
 }
 
-//tabel.filter(Field("id", _ == "John")
 
-val tabelJohn = new Table("john", List(Map("id" -> "John")))
-val fieldCond1: FilterCond = Field("id", _ == "John")
-tabelJohn.filter(fieldCond1)
-tabelJohn.filter(Field("id", _ == "John"))
+// Database.scala
 
-//val field1: Field = Field("id", _ == "John")
-//val touple1: Field = ("id", (_: String) == "John")
-//field1.eval(Map("id" -> "John")) == touple1.eval(Map("id" -> "John"))
-//val equal: FilterCond = Equal(Field("id", _ == "John"), Field("hobby", _ == "Football"))
-//equal.eval(Map("id" -> "John", "hobby" -> "Football")).get
-//!equal.eval(Map("id" -> "John", "hobby" -> "Basketball")).get
+case class Database(tables: List[Table]) {
+  override def toString: String = tables.mkString("\n")
+
+  def create(tableName: String): Database = {
+    val alreadyThere = tables.map(_.tableName).contains(tableName)
+    val newTables = if (alreadyThere) tables else tables.appended(new Table(tableName, List()))
+    Database(newTables)
+  }
+
+  def drop(tableName: String): Database = Database(tables.filterNot(_.tableName.eq(tableName)))
+
+  def selectTables(tableNames: List[String]): Option[Database] = {
+    if (tables.exists(table => tableNames.contains(table.tableName)))
+      Some(Database(tables.filter(table => tableNames.contains(table.tableName))))
+    else
+      None
+  }
+
+  def join(table1: String, c1: String, table2: String, c2: String): Option[Table] = {
+    val t1 = tables.find(_.name == table1).get
+    val t2 = tables.find(_.name == table2).get
+
+    val commonHeader = t1.header ++ t2.header
+    val commonTable = Table(table1, commonHeader.mkString(","))
+    print(commonHeader)
+    Some(commonTable)
+  }
+
+  // Implement indexing here
+  def apply(i: Int): Table = tables(i)
+}
+
+val people: Table = Table("People",
+  List(
+    Map("name" -> "John", "age" -> "23", "address" -> "123 Main St"),
+    Map("name" -> "Jane", "age" -> "27", "address" -> "456 Elm St")
+  )
+)
+
+val jobs: Table = Table("Jobs",
+  List(
+    Map("title" -> "Engineer", "salary" -> "100000", "person_name" -> "John", "address" -> "654 Oak St"),
+    Map("title" -> "Manager", "salary" -> "200000", "person_name" -> "Jane", "address" -> "123 Main St")
+  )
+)
+
+val db: Database = Database(List(people, jobs))
+val resultJoin: Option[Table] = db.join("People", "name", "Jobs", "person_name")
