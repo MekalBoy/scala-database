@@ -21,5 +21,26 @@ object Queries {
       "age"
     )
 
-  def youngAdultHobbiesJ(db: Database): Option[Table] = ???
+  def youngAdultHobbiesJ(db: Database): Option[Table] =
+    queryT(
+      queryT(
+        queryT(
+          queryT(
+          Some(
+            queryDB(
+              queryDB(Some(db), "JOIN", "People", "name", "Hobbies", "name"), "SELECT", List("People")
+            ).get(0)
+          ),
+            "FILTER",
+            Field("age", _ < "25")
+          ),
+          "FILTER",
+          Field("name", _.charAt(0) == 'J')
+        ),
+        "FILTER",
+        !!(Field("hobby", _.isBlank))
+      ),
+      "EXTRACT",
+      List("name", "hobby")
+    )
 }
