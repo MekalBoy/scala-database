@@ -20,8 +20,15 @@ case class Database(tables: List[Table]) {
     val firstTable = tables.find(_.name == table1)
     val secondTable = tables.find(_.name == table2)
 
-    // TODO
-    None
+    (firstTable, secondTable) match {
+      case (Some(t1), Some(t2)) => {
+        // TODO
+        None
+      }
+      case (Some(t1), _) => firstTable
+      case (_, Some(t2)) => secondTable
+      case (_, _) => None
+    }
   }
 
   // Implement indexing here
