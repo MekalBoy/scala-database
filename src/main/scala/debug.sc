@@ -165,48 +165,100 @@ case class Database(tables: List[Table]) {
       None
   }
 
-  def join (table1: String, c1: String, table2: String, c2: String): Option[Table] =
-    (tables.filter(_.name == table1), tables.filter(_.name == table2)) match
-      case (Nil, Nil) => None
-      case (table1 :: _, Nil) => Some(table1)
-      case (Nil, table2 :: _) => Some(table2)
-      case (table1 :: _, table2 :: _) =>
-        val tableData1 = table1.data
-        val tableData2 = table2.data.map(row => row - c2 + (c1 -> row(c2)))
-        val header = (tableData1.head ++ tableData2.head).map(_(0) -> "")
+  def join(table1: String, c1: String, table2: String, c2: String): Option[Table] = {
+    val firstTable = tables.find(_.name == table1)
+    val secondTable = tables.find(_.name == table2)
 
-        def aux(row1: Row, acc: Tabular): Tabular = tableData2.filter(_(c1) contains row1(c1)) match
-          case Nil => acc
-          case row2 :: _ =>
-            def merge(pairs1: List[(String, String)], pairs2: List[(String, String)]): List[(String, String)] =
-              (pairs1, pairs2) match
-                case (Nil, Nil) => Nil
-                case (Nil, y :: ys) =>
-                  if row1 contains y(0) then merge(Nil, ys) else y :: merge(Nil, ys)
-                case (x :: xs, Nil) => x :: merge(xs, row2.toList)
-                case (x :: xs, y :: ys) =>
-                  if x(0) != y(0) then merge(pairs1, ys) else (if x(1) == y(1) then x else (x(0), x(1) + ';' + y(1))) :: merge(xs, row2.toList)
-            merge(row1.toList, row2.toList).toMap :: acc
-        val part1 = tableData1.foldRight(Nil)(aux)
-        val part2 = tableData1.filterNot(part1.map(_(c1)) contains _(c1))
-        val part3 = tableData2.filterNot(part1.map(_(c1)) contains _(c1))
-        Some(Table(table1.name, (part1 ::: part2 ::: part3).map(header ++ _)))
+    (firstTable, secondTable) match {
+      case (Some(t1), Some(t2)) => {
+        val td1 = t1.data
+        val td2 = t2.data.map(row => row - c2 + (c1 -> row(c2)))
+
+        def tuple(r1: Row, acc: List[(Row, Row)]): List[(Row, Row)] =
+          td2.filter(_(c1) contains r1(c1)) match
+            case Nil => acc
+            case r2 :: _ => (r1, r2) :: acc
+
+        def merge(r1: Row, r2: Row): Row = {
+          def helper(tuple: (String, String), acc: List[(String, String)]): List[(String, String)] =
+            r2.get(tuple._1) match {
+              case Some(str) => if str == tuple._2 then (tuple._1, str) :: acc else (tuple._1, tuple._2 + ';' + str) :: acc
+              case _ => tuple :: acc
+            }
+
+          r1.foldRight(Nil)(helper).toMap ++ r2.filterNot(r1 contains _(0))
+        }
+
+        //        def replace(tuple: (String, String)): (String, String) = if tuple._1 != c2 then tuple else (c1, tuple._2)
+
+        val header = (td1.head ++ td2.head).map(_(0) -> "")
+
+        val merged = td1.foldRight(Nil)(tuple).map(merge)
+        val first = td1.filterNot(td2.map(_(c1)) contains _(c1))
+        val second = td2.filterNot(td1.map(_(c1)) contains _(c1))
+
+        println("Merged")
+        println(merged)
+        println("First")
+        println(first)
+        println("Second")
+        println(second)
+
+        Some(Table(t1.name, (merged ::: first ::: second).map(header ++ _)))
+      }
+      case (Some(t1), _) => Some(t1)
+      case (_, Some(t2)) => Some(t2)
+      case (_, _) => None
+    }
+  }
 
   // Implement indexing here
   def apply(i: Int): Table = tables(i)
 }
 
-val people: Table = Table("People",
+val people1: Table = Table("People",
   List(
     Map("name" -> "John", "age" -> "23", "address" -> "123 Main St"),
     Map("name" -> "Jane", "age" -> "27", "address" -> "456 Elm St")
   )
 )
 
-val jobs: Table = Table("Jobs",
+val jobs1: Table = Table("Jobs",
   List(
     Map("title" -> "Engineer", "salary" -> "100000", "person_name" -> "John", "address" -> "654 Oak St"),
     Map("title" -> "Manager", "salary" -> "200000", "person_name" -> "Jane", "address" -> "123 Main St")
+  )
+)
+
+val people : Table = Table(
+  "People",
+  List(
+    Map("name" -> "John", "age" -> "23", "address" -> "123 Main St"),
+    Map("name" -> "Jane", "age" -> "27", "address" -> "456 Elm St"),
+    Map("name" -> "Joe", "age" -> "30", "address" -> "789 Maple St"),
+    Map("name" -> "Jill", "age" -> "25", "address" -> "101 Oak St"),
+    Map("name" -> "Jack", "age" -> "27", "address" -> "112 Pine St"),
+    Map("name" -> "Jen", "age" -> "24", "address" -> "131 Cedar St"),
+    Map("name" -> "Jim", "age" -> "26", "address" -> "141 Birch St"),
+    Map("name" -> "Jesse", "age" -> "29", "address" -> "151 Spruce St"),
+    Map("name" -> "Jenny", "age" -> "23", "address" -> "161 Fir St"),
+    Map("name" -> "Jerry", "age" -> "28", "address" -> "171 Larch St")
+  )
+)
+
+val jobs: Table = Table(
+  "Jobs",
+  List(
+    Map("title" -> "Engineer", "salary" -> "100000", "person_name" -> "John", "address" -> "654 Oak St"),
+    Map("title" -> "Manager", "salary" -> "200000", "person_name" -> "Jane", "address" -> "123 Main St"),
+    Map("title" -> "CEO", "salary" -> "300000", "person_name" -> "Joe", "address" -> "789 Maple St"),
+    Map("title" -> "Banker", "salary" -> "150000", "person_name" -> "Mona", "address" -> "789 Maple St"),
+    Map("title" -> "Doctor", "salary" -> "200000", "person_name" -> "Jack", "address" -> "112 Pine St"),
+    Map("title" -> "Nurse", "salary" -> "100000", "person_name" -> "Jen", "address" -> "132 Cedar St"),
+    Map("title" -> "Teacher", "salary" -> "80000", "person_name" -> "Jill", "address" -> "888 Elm St"),
+    Map("title" -> "Engineer", "salary" -> "120000", "person_name" -> "Mimi", "address" -> "141 Birch St"),
+    Map("title" -> "Programmer", "salary" -> "250000", "person_name" -> "Jenny", "address" -> "161 Fir St"),
+    Map("title" -> "Teacher", "salary" -> "400000", "person_name" -> "Jerry", "address" -> "171 Larch St")
   )
 )
 

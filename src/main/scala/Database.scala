@@ -45,8 +45,8 @@ case class Database(tables: List[Table]) {
         val header = (td1.head ++ td2.head).map(_(0) -> "")
 
         val merged = td1.foldRight(Nil)(tuple).map(merge)
-        val first = td1.filterNot(merged.map(_(c1)) contains _(c1))
-        val second = td2.filterNot(merged.map(_(c1)) contains _(c1))
+        val first = td1.filterNot(td2.map(_(c1)) contains _(c1))
+        val second = td2.filterNot(td1.map(_(c1)) contains _(c1))
 
         Some(Table(t1.name, (merged ::: first ::: second).map(header ++ _)))
       }
